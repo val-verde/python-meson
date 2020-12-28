@@ -102,7 +102,7 @@ class WindowsModule(ExtensionModule):
                 self._rescomp = (rescomp, rc_type)
                 break
         else:
-            raise MesonException('Could not determine type of Windows resource compiler')
+            self._rescomp = (rescomp, ResourceCompilerType.windres)
 
         return self._rescomp
 
