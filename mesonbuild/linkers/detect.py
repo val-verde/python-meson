@@ -164,7 +164,7 @@ def guess_nix_linker(env: 'Environment', compiler: T.List[str], comp_class: T.Ty
 
     v = search_version(o + e)
     linker: DynamicLinker
-    if 'LLD' in o.split('\n')[0]:
+    if o.startswith('LLD') and o.endswith('(compatible with GNU linkers)\n'):
         linker = LLVMDynamicLinker(
             compiler, for_machine, comp_class.LINKER_PREFIX, override, version=v)
     elif 'Snapdragon' in e and 'LLVM' in e:
@@ -189,23 +189,24 @@ def guess_nix_linker(env: 'Environment', compiler: T.List[str], comp_class: T.Ty
 
         linker = LLVMDynamicLinker(compiler, for_machine, comp_class.LINKER_PREFIX, override, version=v)
     # first might be apple clang, second is for real gcc, the third is icc
-    elif e.endswith('(use -v to see invocation)\n') or 'macosx_version' in e or 'ld: unknown option:' in e:
-        if isinstance(comp_class.LINKER_PREFIX, str):
-            cmd = compiler + [comp_class.LINKER_PREFIX + '-v'] + extra_args
-        else:
-            cmd = compiler + comp_class.LINKER_PREFIX + ['-v'] + extra_args
-        mlog.debug('-----')
-        mlog.debug(f'Detecting Apple linker via: {join_args(cmd)}')
-        _, newo, newerr = Popen_safe(cmd)
-        mlog.debug(f'linker stdout:\n{newo}')
-        mlog.debug(f'linker stderr:\n{newerr}')
+    elif e.endswith('(use -v to see invocation)\n') or 'macosx_version' in e or 'ld: unknown option:' in e or o.startswith('LLD'):
+        if not o.startswith('LLD'):
+            if isinstance(comp_class.LINKER_PREFIX, str):
+                cmd = compiler + [comp_class.LINKER_PREFIX + '-v'] + extra_args
+            else:
+                cmd = compiler + comp_class.LINKER_PREFIX + ['-v'] + extra_args
+            mlog.debug('-----')
+            mlog.debug(f'Detecting Apple linker via: {join_args(cmd)}')
+            _, newo, newerr = Popen_safe(cmd)
+            mlog.debug(f'linker stdout:\n{newo}')
+            mlog.debug(f'linker stderr:\n{newerr}')
 
-        for line in newerr.split('\n'):
-            if 'PROJECT:ld' in line:
-                v = line.split('-')[1]
-                break
-        else:
-            __failed_to_detect_linker(compiler, check_args, o, e)
+            for line in newerr.split('\n'):
+                if 'PROJECT:ld' in line:
+                    v = line.split('-')[1]
+                    break
+                else:
+                    __failed_to_detect_linker(compiler, check_args, o, e)
         linker = AppleDynamicLinker(compiler, for_machine, comp_class.LINKER_PREFIX, override, version=v)
     elif 'GNU' in o or 'GNU' in e:
         cls: T.Type[GnuDynamicLinker]
