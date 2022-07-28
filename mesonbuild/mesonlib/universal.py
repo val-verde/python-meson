@@ -993,7 +993,7 @@ def get_library_dirs() -> T.List[str]:
         return unixdirs
     # FIXME: this needs to be further genericized for aarch64 etc.
     machine = platform.machine()
-    if machine in ('i386', 'i486', 'i586', 'i686'):
+    if machine in ('i386', 'i486', 'i586', 'i686', 'i786'):
         plat = 'i386'
     elif machine.startswith('arm'):
         plat = 'arm'
